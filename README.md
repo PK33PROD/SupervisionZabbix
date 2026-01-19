@@ -1,6 +1,6 @@
 # 🛰️ Modèles & Tableaux de Bord Zabbix (Zabbix 7.4)
 
-Ce dépôt rassemble l’ensemble des modèles, tableaux de bord et configurations créés dans le cadre de la formation **Superviser une Infrastructure avec Zabbix** proposée par TeachMeMore sur Udemy, ainsi que les modèles personnalisés que j’ai développés pour superviser ma propre infrastructure sous **Zabbix 7.4**.
+Ce dépôt rassemble l’ensemble des modèleset configurations créés dans le cadre de la formation **Superviser une Infrastructure avec Zabbix** proposée par TeachMeMore sur Udemy, ainsi que les modèles personnalisés que j’ai développés pour superviser ma propre infrastructure sous **Zabbix 7.4**.
 
 🎓 **Formation suivie :**  
 [Superviser une Infrastructure avec Zabbix (Zabbix 6 – 2023)](https://www.udemy.com/course/zabbix-6-2023/)
@@ -50,7 +50,7 @@ Ces modèles peuvent servir de base pour d’autres infrastructures ou pour vos 
 1. Télécharger le fichier du modèle souhaité  
 2. Aller dans **Configuration → Templates**  
 3. Cliquer sur **Import**  
-4. Importer le fichier `.xml` ou `.yaml`  
+4. Importer le fichier `.yaml`  
 5. Associer le modèle à un hôte
 
 ---
