@@ -1,0 +1,194 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: 36bff6c29af64692839d077febfc7079
+      name: 'Templates/Network devices'
+  templates:
+    - uuid: 4abe6f04b67f492d9ff5d188b1c71266
+      template: 'Freebox Basic Monitoring - PK33PROD'
+      name: 'Freebox Basic Monitoring | PK33PROD'
+      description: |
+        Surveillance basique de la Freebox : Ce modèle regroupe les vérifications essentielles pour assurer la disponibilité et la réactivité de votre Freebox. Il inclut le contrôle du ping (connectivité réseau), la perte de paquets, le temps de réponse ICMP, ainsi que la vérification de l’interface HTTP (code de statut et temps de réponse). Idéal pour un suivi simple et efficace.
+        
+        Basic Freebox Monitoring: This template provides essential checks to ensure the availability and responsiveness of your Freebox. It includes ping monitoring (network connectivity), packet loss, ICMP response time, and HTTP interface checks (status code and response time). Perfect for simple and efficient monitoring.
+      groups:
+        - name: 'Templates/Network devices'
+      items:
+        - uuid: 5805d92984a6456eae5ef3486f23af25
+          name: 'Temps de réponse / Ping'
+          type: SIMPLE
+          key: 'icmppingsec[{$FREEBOX.IP},3,20,56,1000,avg]'
+          value_type: FLOAT
+          units: ms
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '1000'
+          tags:
+            - tag: category
+              value: latency
+            - tag: check
+              value: performance
+            - tag: service
+              value: icmp
+          triggers:
+            - uuid: b2c4aa3bb27f41c4872c385e9247b33c
+              expression: 'last(/Freebox Basic Monitoring - PK33PROD/icmppingsec[{$FREEBOX.IP},3,20,56,1000,avg])>50'
+              name: 'Temps de réponse / Latence ICMP trop élevée'
+              priority: AVERAGE
+              description: 'Déclenche une alerte lorsque la latence ICMP (ping) dépasse 50 ms. Cela peut indiquer un problème de réseau ou une congestion entre le serveur Zabbix et la Freebox.'
+              tags:
+                - tag: category
+                  value: latency
+                - tag: check
+                  value: performance
+                - tag: impact
+                  value: connectivity
+                - tag: service
+                  value: icmp
+        - uuid: de7d66fbbbaf49aa8e81868a2d8c2d1b
+          name: Ping
+          type: SIMPLE
+          key: 'icmpping[{$FREEBOX.HOST},3,20,56,1000]'
+          description: '« Vérifie la disponibilité de la Freebox via ICMP (Ping). Retourne 1 si OK, 0 si KO.»'
+          valuemap:
+            name: 'Ping (icmp)'
+          tags:
+            - tag: category
+              value: network
+            - tag: check
+              value: availability
+            - tag: service
+              value: icmp
+          triggers:
+            - uuid: d24867b9b53b4c4d9d19fdf567373cba
+              expression: 'last(/Freebox Basic Monitoring - PK33PROD/icmpping[{$FREEBOX.HOST},3,20,56,1000])=0'
+              name: 'Freebox-serveur ne répond plus au ping'
+              priority: DISASTER
+              description: 'Déclenche une alerte lorsque la Freebox ne répond plus aux requêtes ICMP (ping).'
+              tags:
+                - tag: category
+                  value: network
+                - tag: check
+                  value: availability
+                - tag: impact
+                  value: connectivity
+                - tag: service
+                  value: icmp
+        - uuid: b32b30f71a5a451fa5863060c73af090
+          name: 'Temps de réponse / Interface Admin HTTP'
+          type: SIMPLE
+          key: 'net.tcp.service.perf[http,{$FREEBOX.HOST},80]'
+          value_type: FLOAT
+          units: ms
+          description: 'Temps de réponse HTTP.'
+          valuemap:
+            name: 'HTTP Status'
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '1000'
+          tags:
+            - tag: category
+              value: latency
+            - tag: check
+              value: performance
+            - tag: service
+              value: http
+          triggers:
+            - uuid: fbada7658e8b492ab90131fcf7e35619
+              expression: 'last(/Freebox Basic Monitoring - PK33PROD/net.tcp.service.perf[http,{$FREEBOX.HOST},80])>2'
+              name: 'Temps de réponse / HTTP trop élevé'
+              priority: AVERAGE
+              description: 'Déclenche une alerte lorsque le temps de réponse de l’interface HTTP dépasse 2 secondes. Cela peut indiquer une surcharge ou un problème de performance sur la Freebox.'
+              tags:
+                - tag: category
+                  value: latency
+                - tag: check
+                  value: performance
+                - tag: impact
+                  value: admin-interface
+                - tag: service
+                  value: http
+        - uuid: 2da726a036864723b1f74fc870b7755b
+          name: 'Interface Admin HTTP'
+          type: SIMPLE
+          key: 'net.tcp.service[http,{$FREEBOX.HOST},80]'
+          description: |
+            Cette éléments vérifie le bon fonctionnement de l'interface Admin freeboxos : 
+            1 => OK
+            0 => KO
+          valuemap:
+            name: 'HTTP Status'
+          tags:
+            - tag: category
+              value: network
+            - tag: check
+              value: availability
+            - tag: service
+              value: http
+          triggers:
+            - uuid: 751f538fe0624869840af17d92d81d5f
+              expression: 'last(/Freebox Basic Monitoring - PK33PROD/net.tcp.service[http,{$FREEBOX.HOST},80])=0'
+              name: 'Interface HTTP inaccessible'
+              priority: HIGH
+              description: 'Déclenche une alerte lorsque le port HTTP (80) de la Freebox ne répond pas.'
+              tags:
+                - tag: category
+                  value: network
+                - tag: check
+                  value: availability
+                - tag: impact
+                  value: admin-interface
+                - tag: service
+                  value: http
+      tags:
+        - tag: class
+          value: network
+        - tag: target
+          value: freebox
+      macros:
+        - macro: '{$FREEBOX.HOST}'
+          value: mafreebox.freebox.fr
+        - macro: '{$FREEBOX.IP}'
+          value: 192.168.1.254
+        - macro: '{$HTTP.INTERVAL}'
+          value: '60'
+        - macro: '{$PING.INTERVAL}'
+          value: '60'
+      valuemaps:
+        - uuid: 3de15c70766b41e2a83638515b641bee
+          name: 'HTTP Status'
+          mappings:
+            - value: '200'
+              newvalue: OK
+            - value: '404'
+              newvalue: 'Non trouvé'
+            - value: '500'
+              newvalue: 'Erreur serveur'
+        - uuid: 6d0d256d0c154baa91ce4a9cf216660d
+          name: 'Ping (icmp)'
+          mappings:
+            - value: '0'
+              newvalue: 'Hors ligne'
+            - value: '1'
+              newvalue: 'En ligne'
+  graphs:
+    - uuid: 77c6c30dbebd47f490290bcb647acd7d
+      name: 'Temps de réponse / HTTP'
+      yaxismax: '0'
+      graph_items:
+        - color: 1A7C11
+          calc_fnc: ALL
+          item:
+            host: 'Freebox Basic Monitoring - PK33PROD'
+            key: 'net.tcp.service.perf[http,{$FREEBOX.HOST},80]'
+    - uuid: e8cf92513b1443d1bbf45f7b40ce5713
+      name: 'Temps de réponse / ICMP'
+      yaxismax: '0'
+      graph_items:
+        - color: 1A7C11
+          calc_fnc: ALL
+          item:
+            host: 'Freebox Basic Monitoring - PK33PROD'
+            key: 'icmppingsec[{$FREEBOX.IP},3,20,56,1000,avg]'
