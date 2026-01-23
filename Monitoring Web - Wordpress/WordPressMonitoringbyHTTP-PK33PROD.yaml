@@ -1,0 +1,881 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
+      name: Templates/Applications
+  templates:
+    - uuid: 82d40d88c20045d88a2b5dc714022e87
+      template: 'Template WordPress Monitoring'
+      name: 'WordPress Monitoring by HTTP | PK33PROD'
+      description: 'Template de base : https://github.com/enderkus/wp-zabbix'
+      groups:
+        - name: Templates/Applications
+      items:
+        - uuid: d5a09e345e604625a1570509f82d036c
+          name: 'Web | HTTPS'
+          type: SIMPLE
+          key: 'net.tcp.service[https,{$WEB.DOMAIN},443]'
+          delay: 2m
+          tags:
+            - tag: check
+              value: https
+            - tag: metric
+              value: perf
+          triggers:
+            - uuid: 9d3b56ef60074625a3c0185a35a95376
+              expression: 'last(/Template WordPress Monitoring/net.tcp.service[https,{$WEB.DOMAIN},443])=0'
+              name: 'HTTP ko'
+              priority: DISASTER
+              tags:
+                - tag: sla
+                  value: richelieu.pk33prod
+        - uuid: 4587d1ecb68d468b9f02d80d50f347e3
+          name: 'Cron: Disabled'
+          type: DEPENDENT
+          key: wordpress.cron.disabled
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.cron.cron_disabled
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: e0902c4595414827b6f55941867f0a62
+          name: 'Cron: Next Run In Seconds'
+          type: DEPENDENT
+          key: wordpress.cron.next_run_seconds
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.cron.next_run_in_seconds
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 3ca0844d86f34ad2858c5ad3a133be85
+          name: 'Cron: Stuck Jobs'
+          type: DEPENDENT
+          key: wordpress.cron.stuck
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.cron.stuck_jobs
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 04edace248ab4eeaa7d19317c3bd3e55
+              expression: 'last(/Template WordPress Monitoring/wordpress.cron.stuck)>0'
+              name: 'WordPress cron jobs stuck ({ITEM.LASTVALUE})'
+              priority: AVERAGE
+              manual_close: 'YES'
+        - uuid: 593b568f6d834ce5b453cb84b0360e8f
+          name: 'Cron: Total Jobs'
+          type: DEPENDENT
+          key: wordpress.cron.total
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.cron.total_jobs
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 7582fb1a8c6e4b1aaf142d3298580ca8
+          name: 'Database: Size'
+          type: DEPENDENT
+          key: wordpress.database.size
+          value_type: FLOAT
+          units: MB
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.database.database_size_mb
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 642ae84659cc491a8eb3d1b76acf6f4e
+          name: 'Database: Table Count'
+          type: DEPENDENT
+          key: wordpress.database.table_count
+          units: tables
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.database.table_count
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: cc8325ecc209412b8dfe56ec98a8ac89
+          name: 'WordPress: Debug Mode Enabled'
+          type: DEPENDENT
+          key: wordpress.debug_mode
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.wordpress.debug_mode
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: e17dbc56978d408e8ccd96e559431bd6
+          name: 'Disk: Free Space'
+          type: DEPENDENT
+          key: wordpress.disk.free_space_gb
+          value_type: FLOAT
+          units: GB
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.disk.disk_free_space_gb
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 1c3b18df27a54f98b38d220b49e72f69
+          name: 'Disk: Upload Directory Size'
+          type: DEPENDENT
+          key: wordpress.disk.upload_dir_size_mb
+          value_type: FLOAT
+          units: MB
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.disk.upload_dir_size_mb
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: e1b50a361608408492f369c36f72d91e
+          name: 'Disk: Usage Percent'
+          type: DEPENDENT
+          key: wordpress.disk.usage_percent
+          value_type: FLOAT
+          units: '%'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.disk.disk_usage_percent
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 72cba16327cf43a2b92405d3aa4ebc44
+              expression: 'last(/Template WordPress Monitoring/wordpress.disk.usage_percent)>95'
+              name: 'CRITICAL disk usage ({ITEM.LASTVALUE}%)'
+              priority: HIGH
+              description: 'Disk usage is over 95% - Urgent action required!'
+              manual_close: 'YES'
+            - uuid: 10dc4958c8174544ba557838ce2a272c
+              expression: 'last(/Template WordPress Monitoring/wordpress.disk.usage_percent)>85'
+              name: 'High disk usage ({ITEM.LASTVALUE})'
+              priority: WARNING
+              description: 'Disk usage is over 85%'
+              manual_close: 'YES'
+        - uuid: befb5883755c473386e4f9f5ed5c1567
+          name: 'Errors: Debug Log Exists'
+          type: DEPENDENT
+          key: wordpress.errors.debug_log_exists
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.errors.debug_log_exists
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 45fd7c7952cd4327acb290ba0deb74d3
+          name: 'Errors: Debug Log Size'
+          type: DEPENDENT
+          key: wordpress.errors.debug_log_size_mb
+          value_type: FLOAT
+          units: MB
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.errors.debug_log_size_mb
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 23eb2589d01b4b05a28e4468329d937d
+          name: 'Errors: Fatal Count'
+          type: DEPENDENT
+          key: wordpress.errors.fatal
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.errors.fatal_errors_count
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 1840a8b1e9834da784c959dfeabd445e
+              expression: 'last(/Template WordPress Monitoring/wordpress.errors.fatal)>0'
+              name: 'Fatal errors detected ({ITEM.LASTVALUE})'
+              priority: HIGH
+              description: 'Fatal PHP errors detected'
+              manual_close: 'YES'
+        - uuid: 7ca200dd618b422b93cda5be447471ac
+          name: 'Errors: Warning Count'
+          type: DEPENDENT
+          key: wordpress.errors.warning
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.errors.warning_errors_count
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: b3dac6058875447ebef89da7d444fc1c
+          name: 'Get WordPress Metrics'
+          type: HTTP_AGENT
+          key: wordpress.get.metrics
+          value_type: TEXT
+          preprocessing:
+            - type: CHECK_JSON_ERROR
+              parameters:
+                - $.error
+          url: '{$WP.URL}/wp-json/wp-zabbix/v1/metrics'
+          headers:
+            - name: X-API-Key
+              value: '{$WP.API.KEY}'
+        - uuid: e955c38d7ff44ca687f1c9c0ec57cb9c
+          name: 'WordPress: Update Available'
+          type: DEPENDENT
+          key: wordpress.has_update
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.wordpress.has_update
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 77d5ee111d69459c913e2f6e5ba40d3a
+              expression: 'last(/Template WordPress Monitoring/wordpress.has_update)=1'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Template WordPress Monitoring/wordpress.has_update)=0'
+              name: 'WordPress core update available'
+              priority: HIGH
+              manual_close: 'YES'
+        - uuid: 486d043e9baa45968ab6dd4a11afd0cc
+          name: 'WordPress: Is Multisite'
+          type: DEPENDENT
+          key: wordpress.is_multisite
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.wordpress.is_multisite
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: be842ffae72c4172a730f2af4856b530
+          name: 'WordPress: Max Memory Limit'
+          type: DEPENDENT
+          key: wordpress.max_memory_limit
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.wordpress.max_memory_limit
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 36e372835dc5489dafd7136b9ce2596f
+          name: 'WordPress: Memory Limit'
+          type: DEPENDENT
+          key: wordpress.memory_limit
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.wordpress.memory_limit
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 6b63443008cd41a0af000ca810b44a7a
+          name: 'Performance: Load Average 1min'
+          type: DEPENDENT
+          key: wordpress.performance.load_1min
+          value_type: FLOAT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.performance.load_average.1min
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: e7cd94577b7d468ab30f5e23082ae533
+          name: 'Performance: Load Average 5min'
+          type: DEPENDENT
+          key: wordpress.performance.load_5min
+          value_type: FLOAT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.performance.load_average.5min
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 4990118ba5ff4ea8a270a3c50ecfcfaa
+          name: 'Performance: Load Average 15min'
+          type: DEPENDENT
+          key: wordpress.performance.load_15min
+          value_type: FLOAT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.performance.load_average.15min
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 4c73e59fdeb84b5896dd1ce8d72549d9
+          name: 'Performance: Memory Peak'
+          type: DEPENDENT
+          key: wordpress.performance.memory_peak_mb
+          value_type: FLOAT
+          units: MB
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.performance.memory_peak_mb
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: cb4013a9489d481d979bec4e5026531e
+          name: 'Performance: Memory Usage'
+          type: DEPENDENT
+          key: wordpress.performance.memory_usage_mb
+          value_type: FLOAT
+          units: MB
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.performance.memory_usage_mb
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 0cfde554ad7745bf830254060df1f854
+          name: 'PHP: Max Execution Time'
+          type: DEPENDENT
+          key: wordpress.php.max_execution_time
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.php.max_execution_time
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: d4ee88c9b89842719ade9aac891c4fa9
+          name: 'PHP: Memory Limit'
+          type: DEPENDENT
+          key: wordpress.php.memory_limit
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.php.memory_limit
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 8642c091115c4632a7df75413a786ada
+          name: 'PHP: Post Max Size'
+          type: DEPENDENT
+          key: wordpress.php.post_max_size
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.php.post_max_size
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: fd632dedfb424aeb83eb94268244c110
+          name: 'PHP: Upload Max Filesize'
+          type: DEPENDENT
+          key: wordpress.php.upload_max_filesize
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.php.upload_max_filesize
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: d089a91619024370a019d46a1d60f8d0
+          name: 'PHP: Version'
+          type: DEPENDENT
+          key: wordpress.php.version
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.php.version
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: cdcfe188a3954180920fdc1529960ecd
+          name: 'Plugins: Active Count'
+          type: DEPENDENT
+          key: wordpress.plugins.active
+          units: plugins
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.plugins.active
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 94a58e439e5649b98b8992d222ce951f
+          name: 'Plugins: Inactive Count'
+          type: DEPENDENT
+          key: wordpress.plugins.inactive
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.plugins.inactive
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 367af75226d04ba39ee2ffa7a4f849e9
+          name: 'Plugins: Total Count'
+          type: DEPENDENT
+          key: wordpress.plugins.total
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.plugins.total
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 8e1e23ee45bf489183a7a347c856ae71
+          name: 'Performance: Response Time'
+          type: DEPENDENT
+          key: wordpress.response_time
+          value_type: FLOAT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.response_time
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 81a64b0ad59645d381528d275384b6bf
+              expression: 'last(/Template WordPress Monitoring/wordpress.response_time)>1000'
+              name: 'Slow API response ({ITEM.LASTVALUE}ms)'
+              priority: WARNING
+              description: 'API response time is longer than 1 second'
+              manual_close: 'YES'
+        - uuid: 9e0aa2521a76491099a0795ae2c33e1d
+          name: 'Security: Failed Logins (24h)'
+          type: DEPENDENT
+          key: wordpress.security.failed_logins_24h
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.failed_logins_last_24h
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: f125baeef7f84c1592798afcb4c125eb
+          name: 'Security: Failed Logins (1h)'
+          type: DEPENDENT
+          key: wordpress.security.failed_logins_hour
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.failed_logins_last_hour
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 0adce8651a02416aaacb2e4f18ed1629
+              expression: 'last(/Template WordPress Monitoring/wordpress.security.failed_logins_hour)>10'
+              name: 'Possible brute force attack ({ITEM.LASTVALUE} attempts)'
+              priority: AVERAGE
+              description: 'Over 10 failed login attempts in the last hour'
+              manual_close: 'YES'
+        - uuid: 99e213b7a8b845d9903dcd98e561a1a0
+          name: 'Security: Failed Logins (Week)'
+          type: DEPENDENT
+          key: wordpress.security.failed_logins_week
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.failed_logins_last_week
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 8e158a7cc0ec4563bd6a9206e4e93754
+          name: 'Security: File Edit Disabled'
+          type: DEPENDENT
+          key: wordpress.security.file_edit_disabled
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.file_edit_disabled
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 31cd69319dea4988aa7ce1cbec1648e5
+          name: 'Security: Last Failed IP'
+          type: DEPENDENT
+          key: wordpress.security.last_failed_ip
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.last_failed_ip
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: c6743689c5744dfc8974c4f2eec89324
+          name: 'Security: Last Failed Username'
+          type: DEPENDENT
+          key: wordpress.security.last_failed_username
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.last_failed_username
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: fefb1de684214add9ffc97c269fabf55
+          name: 'Security: Top Attacked Count'
+          type: DEPENDENT
+          key: wordpress.security.top_attacked_count
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.top_attacked_count
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 7beff5ec72d14e1dadd275cf300a1aa1
+          name: 'Security: Top Attacked Username'
+          type: DEPENDENT
+          key: wordpress.security.top_attacked_username
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.top_attacked_username
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 28b82ffbc822445cbfee4ed95fdadeff
+          name: 'Security: Unique IPs'
+          type: DEPENDENT
+          key: wordpress.security.unique_ips
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.unique_ips_last_24h
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 57832356069845a3b741f5ac842c7a31
+              expression: 'last(/Template WordPress Monitoring/wordpress.security.unique_ips)>5'
+              name: 'Multiple IPs attacking ({ITEM.LASTVALUE} IPs)'
+              priority: HIGH
+              description: 'Attack from more than 5 different IP addresses'
+              manual_close: 'YES'
+        - uuid: c5ce2e65abbd416b92a3e6f0e1f36f78
+          name: 'Security: XML-RPC Enabled'
+          type: DEPENDENT
+          key: wordpress.security.xmlrpc_enabled
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.security.xml_rpc_enabled
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 213e64d03d5c4ceb824e28d35597c943
+          name: 'Site: HTTPS Enabled'
+          type: DEPENDENT
+          key: wordpress.site.https_enabled
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.site.https_enabled
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 976f9d1aaae84c3b97c47e21ad828c1c
+          name: 'Site: Name'
+          type: DEPENDENT
+          key: wordpress.site.name
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.site.name
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: d2516c8d4c614f81b5faf0c7a80d6442
+          name: 'Site: URL'
+          type: DEPENDENT
+          key: wordpress.site.url
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.site.url
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 4c043d78945541b78d93452c405aa36e
+          name: 'SSL: Days Until Expiry'
+          type: DEPENDENT
+          key: wordpress.ssl.days_to_expire
+          units: days
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ssl.certificate_days_until_expiry
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: f49cf44da52e4edb9a72beb2aa448a48
+              expression: 'last(/Template WordPress Monitoring/wordpress.ssl.days_to_expire)<30'
+              name: 'SSL certificate expires in {ITEM.LASTVALUE} days'
+              priority: WARNING
+              description: 'The SSL certificate expires in 30 days.'
+              manual_close: 'YES'
+            - uuid: 742c9b1db87f4e45b58e2a8a0945c458
+              expression: 'last(/Template WordPress Monitoring/wordpress.ssl.days_to_expire)<7'
+              name: 'SSL certificate expires in {ITEM.LASTVALUE} days!'
+              priority: HIGH
+              description: 'Your SSL certificate expires in 7 days!'
+              manual_close: 'YES'
+        - uuid: 6c647fabd37a400a9376338770f84206
+          name: 'SSL: Enabled'
+          type: DEPENDENT
+          key: wordpress.ssl.enabled
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ssl.ssl_enabled
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: ca2624c6ded54df0b598f862a2488ea7
+          name: 'SSL: Expired Status'
+          type: DEPENDENT
+          key: wordpress.ssl.expired
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ssl.certificate_expired
+            - type: BOOL_TO_DECIMAL
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: e66c034ae000478caa611ce0c438a78f
+          name: 'SSL: Certificate Issuer'
+          type: DEPENDENT
+          key: wordpress.ssl.issuer
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ssl.certificate_issuer
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 85ae9b7a3fc74e89b74653b8a9625f00
+          name: 'WordPress: Plugin Updates'
+          type: DEPENDENT
+          key: wordpress.updates.plugins
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.updates.plugin_updates
+          master_item:
+            key: wordpress.get.metrics
+          triggers:
+            - uuid: 7210336121f24ccfab3ba2ed218f1309
+              expression: 'last(/Template WordPress Monitoring/wordpress.updates.plugins)>5'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Template WordPress Monitoring/wordpress.updates.plugins)<5'
+              name: 'Too many plugin updates ({ITEM.LASTVALUE})'
+              priority: HIGH
+              description: 'More than 5 plugin updates are pending...'
+              manual_close: 'YES'
+        - uuid: 3311c2d9fa2c4d7fb47ac6c9e7220c9b
+          name: 'WordPress: Theme Updates'
+          type: DEPENDENT
+          key: wordpress.updates.themes
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.updates.theme_updates
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: a1df834fb25d4017b794c48e7e3015f0
+          name: 'WordPress: Total Updates'
+          type: DEPENDENT
+          key: wordpress.updates.total
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.updates.total_updates_available
+          master_item:
+            key: wordpress.get.metrics
+        - uuid: 763c166b9117469cacde0ffdf87e6ee0
+          name: 'WordPress: Version'
+          type: DEPENDENT
+          key: wordpress.version
+          value_type: TEXT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.wordpress.version
+          master_item:
+            key: wordpress.get.metrics
+      macros:
+        - macro: '{$WEB.DOMAIN}'
+          value: domain.tld
+        - macro: '{$WP.API.KEY}'
+          value: API_KEY
+          description: 'WordPress Zabbix plugin API key'
+        - macro: '{$WP.URL}'
+          value: 'https://yoursite.com'
+          description: 'WordPress site URL (without trailing slash)'
+  graphs:
+    - uuid: 33f22e1c7fba4fc8a5552f00eaa4ad05
+      name: 'Base de donnée'
+      graph_items:
+        - color: 3F51B5
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.database.size
+        - sortorder: '1'
+          color: FDD835
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.database.table_count
+    - uuid: 3f67709f7cb646ce9102dd65d1a99705
+      name: 'Cron Wordpress'
+      yaxismax: '0'
+      graph_items:
+        - color: 1A7C11
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.cron.stuck
+        - sortorder: '1'
+          color: FF0000
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.cron.total
+        - sortorder: '2'
+          color: 4000FF
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.cron.next_run_seconds
+    - uuid: 71a2f94cccfd4598be3a294532df9761
+      name: 'Global View'
+      yaxismax: '0'
+      graph_items:
+        - drawtype: DASHED_LINE
+          color: AB47BC
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.response_time
+        - sortorder: '1'
+          color: 4CAF50
+          yaxisside: RIGHT
+          calc_fnc: MAX
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.performance.memory_usage_mb
+        - sortorder: '2'
+          drawtype: FILLED_REGION
+          color: 03A9F4
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.database.size
+        - sortorder: '3'
+          color: FF0000
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.disk.upload_dir_size_mb
+        - sortorder: '4'
+          drawtype: BOLD_LINE
+          color: 3F51B5
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.errors.fatal
+        - sortorder: '5'
+          color: FF5722
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.cron.stuck
+    - uuid: cddc61af1c54463592bed2970a2b683b
+      name: 'Log & erreur PHP'
+      yaxismax: '0'
+      graph_items:
+        - color: FF0000
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.errors.debug_log_exists
+        - sortorder: '1'
+          color: FF8000
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.errors.fatal
+        - sortorder: '2'
+          color: C62828
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.errors.warning
+    - uuid: fc014f5609634a09813e2f8ef495cc92
+      name: 'Performance WordPress'
+      yaxismax: '0'
+      graph_items:
+        - color: FF8000
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.performance.load_1min
+        - sortorder: '1'
+          color: '274482'
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.performance.memory_peak_mb
+        - sortorder: '2'
+          color: '666699'
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.performance.memory_usage_mb
+        - sortorder: '3'
+          color: 388E3C
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.response_time
+    - uuid: 89efca3870a04b9ba73407efabaf608d
+      name: Stockage
+      yaxismax: '0'
+      graph_items:
+        - color: FF0000
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.disk.free_space_gb
+        - sortorder: '1'
+          color: 00BFFF
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.disk.upload_dir_size_mb
+        - sortorder: '2'
+          color: 388E3C
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.disk.usage_percent
+    - uuid: b2f715df91ea437db5469653c3fa5c3b
+      name: 'Sécurité Wordpress'
+      graph_items:
+        - color: FF4000
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.security.failed_logins_hour
+        - sortorder: '1'
+          color: FF0000
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.security.failed_logins_24h
+        - sortorder: '2'
+          color: 8E24AA
+          yaxisside: RIGHT
+          calc_fnc: ALL
+          item:
+            host: 'Template WordPress Monitoring'
+            key: wordpress.security.unique_ips
