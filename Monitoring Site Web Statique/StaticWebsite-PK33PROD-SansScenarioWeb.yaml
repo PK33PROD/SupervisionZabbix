@@ -1,0 +1,166 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
+      name: Templates/Applications
+  templates:
+    - uuid: db2d3b69c07f4c94820e8288e20b89da
+      template: StaticWebsite-PK33PROD-SansScenarioWeb
+      name: StaticWebsite-PK33PROD-SansScenarioWeb
+      description: |
+        Ce modèle Zabbix permet la supervision complète d’un site web statique basé sur HTML/CSS.
+        Il réalise des contrôles automatisés sur la disponibilité du site, le temps de réponse, l’intégrité du contenu, la validité des certificats HTTPS et différents indicateurs de performance.
+        Le modèle est conçu pour être léger, rapide à déployer et entièrement compatible avec Zabbix 7.4. Il peut être assigné à n’importe quel hôte représentant un site web ou une ressource HTTP(S).
+        ///=\\\
+        This Zabbix template provides full monitoring capabilities for a static HTML/CSS website.
+        It performs automated checks on website availability, response time, content integrity, HTTPS certificate validity, and several performance-related metrics.
+        The template is designed to be lightweight, easy to deploy, and fully compatible with Zabbix 7.4. It can be attached to any host representing a website or HTTP(S) resource.
+      groups:
+        - name: Templates/Applications
+      items:
+        - uuid: 3a404148250d4bb9b5bcdf268b6e56ab
+          name: 'Web | Performance - HTTPS'
+          type: SIMPLE
+          key: 'net.tcp.service.perf[https,{$WEB.DOMAIN},443]'
+          delay: 2m
+          value_type: FLOAT
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '1000'
+          tags:
+            - tag: check
+              value: https
+            - tag: metric
+              value: perf
+          triggers:
+            - uuid: b4202d0c384540609381e1b7341e601e
+              expression: 'avg(/StaticWebsite-PK33PROD-SansScenarioWeb/net.tcp.service.perf[https,{$WEB.DOMAIN},443],5m)=1500'
+              name: 'HTTPS - Response Time > 1.5s'
+              priority: AVERAGE
+              dependencies:
+                - name: 'HTTPS - Port Unreachable'
+                  expression: 'last(/StaticWebsite-PK33PROD-SansScenarioWeb/net.tcp.service[https,{$WEB.DOMAIN},443])=0'
+              tags:
+                - tag: class
+                  value: performance
+                - tag: component
+                  value: https
+                - tag: scope
+                  value: external
+                - tag: service
+                  value: web
+                - tag: sla
+                  value: '{$DOMAIN.SLA}'
+            - uuid: 13a7025ece0740f1a4725e96231a3e7b
+              expression: 'avg(/StaticWebsite-PK33PROD-SansScenarioWeb/net.tcp.service.perf[https,{$WEB.DOMAIN},443],5m)=3000'
+              name: 'HTTPS - Response Time > 3s'
+              priority: HIGH
+              dependencies:
+                - name: 'HTTPS - Port Unreachable'
+                  expression: 'last(/StaticWebsite-PK33PROD-SansScenarioWeb/net.tcp.service[https,{$WEB.DOMAIN},443])=0'
+              tags:
+                - tag: class
+                  value: performance
+                - tag: component
+                  value: https
+                - tag: scope
+                  value: external
+                - tag: service
+                  value: web
+                - tag: sla
+                  value: '{$DOMAIN.SLA}'
+        - uuid: c4b20612efe740bb90d730f128af8b3a
+          name: 'Web | HTTPS'
+          type: SIMPLE
+          key: 'net.tcp.service[https,{$WEB.DOMAIN},443]'
+          delay: 2m
+          tags:
+            - tag: check
+              value: https
+            - tag: metric
+              value: perf
+          triggers:
+            - uuid: 89e62f3de0fb409cbc19df3e433e23c7
+              expression: 'last(/StaticWebsite-PK33PROD-SansScenarioWeb/net.tcp.service[https,{$WEB.DOMAIN},443])=0'
+              name: 'HTTPS - Port Unreachable'
+              priority: DISASTER
+              tags:
+                - tag: class
+                  value: availability
+                - tag: component
+                  value: https
+                - tag: scope
+                  value: external
+                - tag: service
+                  value: web
+                - tag: sla
+                  value: '{$DOMAIN.SLA}'
+      tags:
+        - tag: component
+          value: website
+        - tag: service
+          value: http/https
+      macros:
+        - macro: '{$DOMAIN.SLA}'
+          value: DOMAIN
+          description: 'Balise personnalisé pour les SLA.'
+        - macro: '{$WEB.DOMAIN}'
+          value: domain.tld
+          description: 'Nom de domaine du site web.'
+        - macro: '{$WEB.URL}'
+          value: 'https://domain.tld/'
+          description: 'Url du site web (Attention les check se font forcement HTTPS).'
+  graphs:
+    - uuid: 36113292eaf54349953110392e9ae770
+      name: 'HTTPS | Port Unreachable (0/1)'
+      width: '200'
+      height: '300'
+      show_work_period: 'NO'
+      show_triggers: 'NO'
+      type: PIE
+      graph_items:
+        - color: 1A7C11
+          calc_fnc: MIN
+          item:
+            host: StaticWebsite-PK33PROD-SansScenarioWeb
+            key: 'net.tcp.service[https,{$WEB.DOMAIN},443]'
+    - uuid: 97876bc5751e4d9890d515b1b4ea33bd
+      name: 'HTTPS | Response Time (ms)'
+      graph_items:
+        - color: 1A7C11
+          item:
+            host: StaticWebsite-PK33PROD-SansScenarioWeb
+            key: 'net.tcp.service.perf[https,{$WEB.DOMAIN},443]'
+        - sortorder: '1'
+          color: '274482'
+          calc_fnc: MAX
+          item:
+            host: StaticWebsite-PK33PROD-SansScenarioWeb
+            key: 'net.tcp.service.perf[https,{$WEB.DOMAIN},443]'
+    - uuid: 5dd00d51427747729ec9fab163770687
+      name: 'Web | Performance Globale'
+      yaxismax: '0'
+      graph_items:
+        - sortorder: '1'
+          color: '274482'
+          calc_fnc: ALL
+          item:
+            host: StaticWebsite-PK33PROD-SansScenarioWeb
+            key: 'net.tcp.service.perf[https,{$WEB.DOMAIN},443]'
+    - uuid: 6aed03ff533548c592ed8e5b07e9b4b8
+      name: 'Web | Santé HTTPS'
+      yaxismax: '0'
+      graph_items:
+        - color: FF4000
+          calc_fnc: ALL
+          item:
+            host: StaticWebsite-PK33PROD-SansScenarioWeb
+            key: 'net.tcp.service.perf[https,{$WEB.DOMAIN},443]'
+        - sortorder: '1'
+          drawtype: BOLD_LINE
+          color: 43A047
+          calc_fnc: ALL
+          item:
+            host: StaticWebsite-PK33PROD-SansScenarioWeb
+            key: 'net.tcp.service[https,{$WEB.DOMAIN},443]'
